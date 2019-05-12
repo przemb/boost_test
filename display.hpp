@@ -11,55 +11,51 @@
 #include <algorithm>
 #include <iomanip>
 
-namespace display
-{
+namespace display {
 using namespace boost::histogram;
 
 const unsigned int histogram_width = 60; // 60 characters 
 const float max_bin_coefficient = 0.95; // 95% of histogram_width
 
 template <class histogram>
-void preapre_labels(const histogram& h, std::vector<std::string>& labels, std::vector<int>& values)
-{
-    const auto lower_bound = h.axis().begin()->lower();
-    const auto upper_bound = h.axis().rbegin()->upper();
+void extract_data(const histogram& h, std::vector<std::string>& labels, std::vector<int>& values) {
 
-    std::string s1 = str(boost::format("[-inf, %g) %|13t|%2g") % lower_bound % 0);
-    labels.push_back(s1);
-    values.push_back(0);
+    std::string tmp = "";
+    auto data = indexed(h, coverage::all);
 
-    for (auto x : indexed(h))
-    {
-        std::string s2 = str(boost::format("[%-g, %g) %|13t|%2g") % x.bin().lower() % x.bin().upper() % *x);
-        labels.push_back(s2);
+    for (auto x : data) {
+        tmp = str(boost::format("[%-g, %g") % x.bin().lower() % x.bin().upper() );
+        labels.push_back(tmp);
         values.push_back(*x);
     }
-    std::string s3 = str(boost::format("[%g, inf] %|13t|%2g") % upper_bound % 0);
-    labels.push_back(s3);
-    values.push_back(0);
 }
 
-void print_all_labels(const std::vector<std::string>& labels)
-{
+void print_all_labels(const std::vector<std::string>& labels) {
     for (const auto &x : labels)
         std::cout << x << "\n";
 }
 
-std::string get_single_label(const std::vector<std::string>& labels, int index)
-{
-    return labels.at(index);
+std::string get_single_label(const std::vector<std::string>& labels, int index, int labels_width){
+    std::string label;
+
+    if(index == labels.size() - 1)
+        label = labels.at(index) + ']';
+    else 
+        label = labels.at(index) + ')';
+
+    label = str(boost::format("%-s") % boost::io::group(std::setw(labels_width), label));
+    
+    return label;
 }
 
 
-std::vector<int> calculate_scale_factors(const std::vector<int>& values)
-{
+std::vector<int> calculate_scale_factors(const std::vector<int>& values) {
     std::vector<int> scale_factors {};
     const unsigned int longest_bin = max_bin_coefficient * histogram_width;
     
     auto max_value = std::max_element(values.begin(), values.end());
       
-    for(const auto& x : values)
-    {
+    for(const auto& x : values){
         int result = x * longest_bin / (*max_value);
         scale_factors.push_back(result);
     }
@@ -67,8 +63,18 @@ std::vector<int> calculate_scale_factors(const std::vector<int>& values)
     return scale_factors;
 }
 
-std::string draw_line(const unsigned int num, const char c = '*', bool complete = true)
-{
+size_t get_max_width(const std::vector<std::string>& container) {
+    size_t max_length = 0;
+    
+    for(const auto& line : container)
+        if(line.length() > max_length)
+            max_length = line.length();
+    
+    return max_length + 1; // + 1 for parenthesis
+}
+    
+
+std::string draw_line(const unsigned int num, const char c = '*', bool complete = true) {
     std::stringstream line;
     int i = 0;
     for(; i < num; ++i)
@@ -84,64 +90,59 @@ std::string draw_line(const unsigned int num, const char c = '*', bool complete 
 }
 
 
-std::string get_single_line(const std::vector<int>& values, const unsigned int index)
-{
+std::string get_single_line(const std::vector<int>& values, const unsigned int index) {
     return draw_line(values.at(index));
 }
 
-std::string get_single_histogram_line(const std::vector<int>& values, const unsigned int index)
-{
+std::string get_single_histogram_line(const std::vector<int>& values, const unsigned int index) {
     std::stringstream line;
     line << "|" << get_single_line(values, index) << '|';
     return line.str();
 }
 
-std::string get_external_line(std::vector<std::string>& labels)
-{
+std::string get_external_line(const unsigned int labels_width) {
     std::stringstream external_line;
-    auto label_width = labels[0].size();
-    external_line << draw_line(label_width, ' ', false) << " +" << draw_line(histogram_width, '-') << '+';
+
+    external_line << draw_line(labels_width, ' ', false) << " +" << draw_line(histogram_width, '-') << '+';
 
     return external_line.str();
 }
 
-std::string get_top_line(std::vector<std::string>& labels, std::vector<int>& values)
-{
+std::string get_top_line(const unsigned int labels_width, const std::vector<int>& values) {
     std::stringstream top_line;
-    auto label_width = labels[0].size();
+
     const unsigned int min = 0;
     auto max_value = std::max_element(values.begin(), values.end());
     const float max = *max_value / max_bin_coefficient;
+
     std::string min_max = str(boost::format("%-i %.1f") % min % boost::io::group(std::setw(histogram_width), max));
 
-    top_line << draw_line(label_width, ' ', false) << " " <<  min_max;
-
+    top_line << draw_line(labels_width, ' ', false) << " " <<  min_max;
     return top_line.str();
 }
 
-std::string draw_histogram(std::vector<std::string>& labels, std::vector<int>& values)
-{   
-    auto scale_factors = calculate_scale_factors(values);
+std::string draw_histogram(std::vector<std::string>& labels, std::vector<int>& values) {   
+    const auto scale_factors = calculate_scale_factors(values);
+    const auto labels_width = get_max_width(labels);
+    
     std::stringstream visualisation;
-
-    visualisation << "\n" << get_top_line(labels, values) << "\n";
-    visualisation << get_external_line(labels) << "\n";
+    visualisation << "\n" << get_top_line(labels_width, values) << "\n";
+    visualisation << get_external_line(labels_width) << "\n";
     
     for(int i = 0; i < values.size(); i++)
-        visualisation << get_single_label(labels, i) << " " << get_single_histogram_line(scale_factors, i) <<  "\n";
+        visualisation << get_single_label(labels, i, labels_width) << " " << get_single_histogram_line(scale_factors, i) <<  "\n";
     
-    visualisation << get_external_line(labels) << "\n\n";
+    visualisation << get_external_line(labels_width) << "\n\n";
     
     return visualisation.str();
 }       
 
 template <class histogram>
-void display(const histogram& h)
-{
-    std::vector<std::string> labels {}; 
+void display(const histogram& h) {
+    std::vector<std::string> labels {};
     std::vector<int> values {};
     
-    preapre_labels(h, labels, values);
+    extract_data(h, labels, values);
 
     std::cout << draw_histogram(labels, values);
 }
