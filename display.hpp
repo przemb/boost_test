@@ -18,7 +18,7 @@ namespace display
 using namespace boost::histogram;
 
 const unsigned int histogram_width = 60; // 60 characters 
-const float max_bin_coefficient = 0.95; // 95%
+const float max_bin_coefficient = 0.95; // 95% of histogram_width
 
 template <class histogram>
 void preapre_labels(const histogram& h, std::vector<std::string>& labels, std::vector<int>& values)
@@ -26,17 +26,17 @@ void preapre_labels(const histogram& h, std::vector<std::string>& labels, std::v
     const auto lower_bound = h.axis().begin()->lower();
     const auto upper_bound = h.axis().rbegin()->upper();
 
-    std::string s1 = str(boost::format("[-inf, %i) %|13t|%2i") % lower_bound % 0);
+    std::string s1 = str(boost::format("[-inf, %g) %|13t|%2g") % lower_bound % 0);
     labels.push_back(s1);
     values.push_back(0);
 
     for (auto x : indexed(h))
     {
-        std::string s2 = str(boost::format("[%-3.1f, %.1f) %|13t|%2i") % x.bin().lower() % x.bin().upper() % *x);
+        std::string s2 = str(boost::format("[%-g, %g) %|13t|%2g") % x.bin().lower() % x.bin().upper() % *x);
         labels.push_back(s2);
         values.push_back(*x);
     }
-    std::string s3 = str(boost::format("[%i, inf] %|13t|%2i") % upper_bound % 0);
+    std::string s3 = str(boost::format("[%g, inf] %|13t|%2g") % upper_bound % 0);
     labels.push_back(s3);
     values.push_back(0);
 }
