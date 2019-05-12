@@ -35,7 +35,7 @@ void print_all_labels(const std::vector<std::string>& labels) {
         std::cout << x << "\n";
 }
 
-std::string get_single_label(const std::vector<std::string>& labels, int index, int labels_width){
+std::string get_single_label(const std::vector<std::string>& labels, const unsigned int index, const unsigned int labels_width){
     std::string label;
 
     if(index == labels.size() - 1)
@@ -121,7 +121,7 @@ std::string get_top_line(const unsigned int labels_width, const std::vector<int>
     return top_line.str();
 }
 
-std::string draw_histogram(std::vector<std::string>& labels, std::vector<int>& values) {   
+std::string draw_histogram(const std::vector<std::string>& labels, const std::vector<int>& values) {   
     const auto scale_factors = calculate_scale_factors(values);
     const auto labels_width = get_max_width(labels);
     
