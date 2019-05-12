@@ -1,14 +1,12 @@
 #ifndef DISPLAY_HPP
 #define DISPLAY_HPP
 
+#include <boost/histogram.hpp>
+#include <boost/format.hpp>
+
+#include <iostream>
 #include <vector>
 #include <string>
-#include <boost/histogram.hpp>
-
-#include "display.hpp"
-#include <boost/histogram.hpp>
-#include <boost/format.hpp> // used here for printing
-#include <iostream>
 #include <sstream>
 #include <algorithm>
 #include <iomanip>
@@ -121,17 +119,20 @@ std::string get_top_line(std::vector<std::string>& labels, std::vector<int>& val
     return top_line.str();
 }
 
-void draw_histogram(std::vector<std::string>& labels, std::vector<int>& values)
+std::string draw_histogram(std::vector<std::string>& labels, std::vector<int>& values)
 {   
     auto scale_factors = calculate_scale_factors(values);
+    std::stringstream visualisation;
 
-    std::cout << "\n" << get_top_line(labels, values) << "\n";
-    std::cout << get_external_line(labels) << "\n";
+    visualisation << "\n" << get_top_line(labels, values) << "\n";
+    visualisation << get_external_line(labels) << "\n";
     
     for(int i = 0; i < values.size(); i++)
-        std::cout << get_single_label(labels, i) << " " << get_single_histogram_line(scale_factors, i) <<  "\n";
+        visualisation << get_single_label(labels, i) << " " << get_single_histogram_line(scale_factors, i) <<  "\n";
     
-    std::cout << get_external_line(labels) << "\n\n";
+    visualisation << get_external_line(labels) << "\n\n";
+    
+    return visualisation.str();
 }       
 
 template <class histogram>
@@ -141,14 +142,9 @@ void display(const histogram& h)
     std::vector<int> values {};
     
     preapre_labels(h, labels, values);
-    //print_all_labels(labels);
-    //std::cout << get_single_label(labels, 1);
-    
-    //std::cout << get_single_histogram_line(values, 1);
-    draw_histogram(labels, values);
+
+    std::cout << draw_histogram(labels, values);
 }
-
-
 
 
 } // namespace display
