@@ -35,7 +35,7 @@ void print_all_labels(const std::vector<std::string>& labels) {
         std::cout << x << "\n";
 }
 
-std::string get_single_label(const std::vector<std::string>& labels, const unsigned int index, const unsigned int labels_width){
+std::string get_single_label(const std::vector<std::string>& labels, const unsigned int index, const unsigned int column_width){
     std::string label;
 
     if(index == labels.size() - 1)
@@ -43,11 +43,17 @@ std::string get_single_label(const std::vector<std::string>& labels, const unsig
     else 
         label = labels.at(index) + ')';
 
-    label = str(boost::format("%-s") % boost::io::group(std::setw(labels_width), label));
+    label = str(boost::format("%-s") % boost::io::group(std::setw(column_width), label));
     
     return label;
 }
 
+std::string get_single_str_value(const std::vector<std::string>& str_values, const unsigned int index, const unsigned int column_width){
+    std::string str_value = str_values.at(index);
+    str_value = str(boost::format("%-s") % boost::io::group(std::setw(column_width), str_value));
+    
+    return str_value;
+}
 
 std::vector<int> calculate_scale_factors(const std::vector<int>& values) {
     std::vector<int> scale_factors {};
@@ -70,9 +76,19 @@ size_t get_max_width(const std::vector<std::string>& container) {
         if(line.length() > max_length)
             max_length = line.length();
     
-    return max_length + 1; // + 1 for parenthesis
+    return max_length;
 }
-    
+
+std::vector<std::string> get_string_values(const std::vector<int>& values) {
+    std::vector<std::string> string_values;
+    string_values.reserve(values.size());
+
+    std::transform(values.begin(), values.end(), std::back_inserter(string_values), 
+                    [](int i){ return std::to_string(i); }
+                  );
+
+    return string_values;
+}
 
 std::string draw_line(const unsigned int num, const char c = '*', bool complete = true) {
     std::stringstream line;
@@ -123,17 +139,21 @@ std::string get_top_line(const unsigned int labels_width, const std::vector<int>
 
 std::string draw_histogram(const std::vector<std::string>& labels, const std::vector<int>& values) {   
     const auto scale_factors = calculate_scale_factors(values);
-    const auto labels_width = get_max_width(labels);
-    
+    const auto str_values = get_string_values(values);
+    const auto labels_width = get_max_width(labels) + 1; // + 1 for parenthesis
+    const auto str_values_width = get_max_width(str_values);
+    const auto hist_shift = labels_width + str_values_width + 1; // + 1 for " "
+
     std::stringstream visualisation;
-    visualisation << "\n" << get_top_line(labels_width, values) << "\n";
-    visualisation << get_external_line(labels_width) << "\n";
+    visualisation << "\n" << get_top_line(hist_shift, values) << "\n";
+    visualisation << get_external_line(hist_shift) << "\n";
     
     for(int i = 0; i < values.size(); i++)
-        visualisation << get_single_label(labels, i, labels_width) << " " << get_single_histogram_line(scale_factors, i) <<  "\n";
+        visualisation << get_single_label(labels, i, labels_width) << " " << 
+        get_single_str_value(str_values, i, str_values_width) << " " << get_single_histogram_line(scale_factors, i) <<  "\n";
     
-    visualisation << get_external_line(labels_width) << "\n\n";
-    
+    visualisation << get_external_line(hist_shift) << "\n\n";
+
     return visualisation.str();
 }       
 
