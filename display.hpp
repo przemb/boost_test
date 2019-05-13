@@ -19,24 +19,18 @@ const float max_bin_coefficient = 0.95; // 95% of histogram_width
 
 template <class histogram>
 void extract_data(const histogram& h, std::vector<std::string>& labels, std::vector<int>& values) {
-
-    std::string tmp = "";
+    std::string label = "";
     auto data = indexed(h, coverage::all);
 
     for (auto x : data) {
-        tmp = str(boost::format("[%-g, %g") % x.bin().lower() % x.bin().upper() );
-        labels.push_back(tmp);
+        label = str(boost::format("[%-g, %g") % x.bin().lower() % x.bin().upper() );
+        labels.push_back(label);
         values.push_back(*x);
     }
 }
 
-void print_all_labels(const std::vector<std::string>& labels) {
-    for (const auto &x : labels)
-        std::cout << x << "\n";
-}
-
-std::string get_single_label(const std::vector<std::string>& labels, const unsigned int index, const unsigned int column_width){
-    std::string label;
+std::string get_single_label(const std::vector<std::string>& labels, const unsigned int index, const unsigned int column_width) {
+    std::string label = "";
 
     if(index == labels.size() - 1)
         label = labels.at(index) + ']';
@@ -44,14 +38,12 @@ std::string get_single_label(const std::vector<std::string>& labels, const unsig
         label = labels.at(index) + ')';
 
     label = str(boost::format("%-s") % boost::io::group(std::setw(column_width), label));
-    
     return label;
 }
 
-std::string get_single_str_value(const std::vector<std::string>& str_values, const unsigned int index, const unsigned int column_width){
+std::string get_single_str_value(const std::vector<std::string>& str_values, const unsigned int index, const unsigned int column_width) {
     std::string str_value = str_values.at(index);
     str_value = str(boost::format("%-s") % boost::io::group(std::setw(column_width), str_value));
-    
     return str_value;
 }
 
@@ -65,7 +57,6 @@ std::vector<int> calculate_scale_factors(const std::vector<int>& values) {
         int result = x * longest_bin / (*max_value);
         scale_factors.push_back(result);
     }
-
     return scale_factors;
 }
 
@@ -75,18 +66,16 @@ size_t get_max_width(const std::vector<std::string>& container) {
     for(const auto& line : container)
         if(line.length() > max_length)
             max_length = line.length();
-    
     return max_length;
 }
 
-std::vector<std::string> get_string_values(const std::vector<int>& values) {
+std::vector<std::string> convert_to_str_vec(const std::vector<int>& values) {
     std::vector<std::string> string_values;
     string_values.reserve(values.size());
 
     std::transform(values.begin(), values.end(), std::back_inserter(string_values), 
                     [](int i){ return std::to_string(i); }
                   );
-
     return string_values;
 }
 
@@ -96,23 +85,16 @@ std::string draw_line(const unsigned int num, const char c = '*', bool complete 
     for(; i < num; ++i)
         line << c;
     
-    if(complete == true)
-    {
+    if(complete == true) {
         for(; i < histogram_width; ++i)
             line << ' ';
     }
-
     return line.str();
-}
-
-
-std::string get_single_line(const std::vector<int>& values, const unsigned int index) {
-    return draw_line(values.at(index));
 }
 
 std::string get_single_histogram_line(const std::vector<int>& values, const unsigned int index) {
     std::stringstream line;
-    line << "|" << get_single_line(values, index) << '|';
+    line << "|" << draw_line(values.at(index)) << '|';
     return line.str();
 }
 
@@ -120,7 +102,6 @@ std::string get_external_line(const unsigned int labels_width) {
     std::stringstream external_line;
 
     external_line << draw_line(labels_width, ' ', false) << " +" << draw_line(histogram_width, '-') << '+';
-
     return external_line.str();
 }
 
@@ -139,21 +120,21 @@ std::string get_top_line(const unsigned int labels_width, const std::vector<int>
 
 std::string draw_histogram(const std::vector<std::string>& labels, const std::vector<int>& values) {   
     const auto scale_factors = calculate_scale_factors(values);
-    const auto str_values = get_string_values(values);
+    const auto str_values = convert_to_str_vec(values);
     const auto labels_width = get_max_width(labels) + 1; // + 1 for parenthesis
     const auto str_values_width = get_max_width(str_values);
     const auto hist_shift = labels_width + str_values_width + 1; // + 1 for " "
 
     std::stringstream visualisation;
-    visualisation << "\n" << get_top_line(hist_shift, values) << "\n";
-    visualisation << get_external_line(hist_shift) << "\n";
+    visualisation << "\n" << get_top_line(hist_shift, values) << "\n" 
+                  << get_external_line(hist_shift) << "\n";
     
     for(int i = 0; i < values.size(); i++)
-        visualisation << get_single_label(labels, i, labels_width) << " " << 
-        get_single_str_value(str_values, i, str_values_width) << " " << get_single_histogram_line(scale_factors, i) <<  "\n";
+        visualisation << get_single_label(labels, i, labels_width) << " " 
+                      << get_single_str_value(str_values, i, str_values_width) << " " 
+                      << get_single_histogram_line(scale_factors, i) <<  "\n";
     
     visualisation << get_external_line(hist_shift) << "\n\n";
-
     return visualisation.str();
 }       
 
