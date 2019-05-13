@@ -81,7 +81,7 @@ std::vector<std::string> convert_to_str_vec(const std::vector<int>& values) {
 
 std::string draw_line(const unsigned int num, const char c = '*', bool complete = true) {
     std::stringstream line;
-    int i = 0;
+    unsigned int i = 0;
     for(; i < num; ++i)
         line << c;
     
@@ -129,7 +129,7 @@ std::string draw_histogram(const std::vector<std::string>& labels, const std::ve
     visualisation << "\n" << get_top_line(hist_shift, values) << "\n" 
                   << get_external_line(hist_shift) << "\n";
     
-    for(int i = 0; i < values.size(); i++)
+    for(unsigned int i = 0; i < values.size(); i++)
         visualisation << get_single_label(labels, i, labels_width) << " " 
                       << get_single_str_value(str_values, i, str_values_width) << " " 
                       << get_single_histogram_line(scale_factors, i) <<  "\n";
