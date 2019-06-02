@@ -169,13 +169,13 @@ std::string get_top_line(const unsigned int labels_width,
 }
 
 visualization_data precalculate_visual_data(extract& h_data){
-  const unsigned int additional_offset = 4; // 6 white characters  
+  const unsigned int additional_offset = 5; // 6 white characters  
   const auto scale_factors = calculate_scale_factors(h_data.values_);
   const auto str_values = convert_to_str_vec(h_data.values_);
   const auto lower_width = get_max_width(h_data.lower_bounds_); 
   const auto upper_width = get_max_width(h_data.upper_bounds_);
   const auto str_values_width = get_max_width(str_values);
-  const auto hist_shift = lower_width + upper_width + str_values_width + additional_offset;
+  const auto hist_shift = lower_width + upper_width  + additional_offset;
 
   visualization_data v_data(str_values, scale_factors, lower_width, upper_width,
                             str_values_width, hist_shift);
