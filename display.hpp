@@ -18,29 +18,72 @@ using namespace boost::histogram;
 const unsigned int histogram_width = 60; // 60 characters
 const float max_bin_coefficient = 0.95;  // 95% of histogram_width
 
+struct extract {
+    std::vector<std::string> upper_bounds_;
+    std::vector<std::string> lower_bounds_;
+    std::vector<int> values_;
+    unsigned int size() const {return values_.size();}
+};
+
+struct visualization_data {
+  std::vector<std::string> str_values_;
+  std::vector<int> scale_factors_;
+
+  size_t lower_bounds_width_ = 0; 
+  size_t upper_bounds_width_ = 0;
+  size_t str_values_width_ = 0;
+  size_t external_line_shift_ = 0; 
+  visualization_data(const std::vector<std::string>& str_values, 
+                     const std::vector<int>& scale_factors,
+                     const size_t& lower_bounds_width,
+                     const size_t& upper_bounds_width, 
+                     const size_t& str_values_width,
+                     const size_t& external_line_shift)
+                     :
+                     str_values_{str_values}, 
+                     scale_factors_{scale_factors},
+                     lower_bounds_width_{lower_bounds_width},
+                     upper_bounds_width_{upper_bounds_width},
+                     str_values_width_{str_values_width},
+                     external_line_shift_{external_line_shift}
+                     {}
+};
+
 template <class histogram>
-void extract_data(const histogram& h, std::vector<std::string>& labels,
-                  std::vector<int>& values) {
-  std::string label = "";
+extract extract_data(const histogram& h) {
+  std::string lower, upper;
+
   auto data = indexed(h, coverage::all);
 
+  extract ex;  
   for (auto x : data) {
-    label = str(boost::format("[%-.1f, %.1f") % x.bin().lower() % x.bin().upper());
-    labels.push_back(label);
-    values.push_back(*x);
+    lower = str( boost::format("%.1f") % x.bin().lower() );
+    upper = str( boost::format("%.1f") % x.bin().upper() );
+    ex.lower_bounds_.push_back(lower);
+    ex.upper_bounds_.push_back(upper);
+    ex.values_.push_back(*x);
   }
+  return ex;    
 }
 
-std::string get_single_label(const std::vector<std::string>& labels,
-                             const unsigned int index, const unsigned int column_width) {
+std::string get_single_label(const extract& data,
+                             const unsigned int index, 
+                             const unsigned int column_width1,
+                             const unsigned int column_width2) {
   std::string label = "";
-
-  if (index == labels.size() - 1)
-    label = labels.at(index) + ']';
+  char parenthesis = ' ';
+  std::string lower = data.lower_bounds_.at(index);
+  std::string upper = data.upper_bounds_.at(index);
+  if (index == data.size() - 1)
+    parenthesis = ']';
   else
-    label = labels.at(index) + ')';
+    parenthesis = ')';
 
-  label = str(boost::format("%-s") % boost::io::group(std::setw(column_width), label));
+  label = '[' 
+        + str(boost::format("%s") % boost::io::group(std::setw(column_width1), lower))
+        + ", "
+        + str(boost::format("%s") % boost::io::group(std::setw(column_width2), upper))
+        + parenthesis;
   return label;
 }
 
@@ -70,7 +113,8 @@ size_t get_max_width(const std::vector<std::string>& container) {
   size_t max_length = 0;
 
   for (const auto& line : container)
-    if (line.length() > max_length) max_length = line.length();
+    if (line.length() > max_length) 
+      max_length = line.length();
   return max_length;
 }
 
@@ -124,35 +168,41 @@ std::string get_top_line(const unsigned int labels_width,
   return top_line.str();
 }
 
-std::string draw_histogram(const std::vector<std::string>& labels,
-                           const std::vector<int>& values) {
-  const auto scale_factors = calculate_scale_factors(values);
-  const auto str_values = convert_to_str_vec(values);
-  const auto labels_width = get_max_width(labels) + 1; // + 1 for parenthesis
+visualization_data precalculate_visual_data(extract& h_data){
+  const unsigned int additional_offset = 4; // 6 white characters  
+  const auto scale_factors = calculate_scale_factors(h_data.values_);
+  const auto str_values = convert_to_str_vec(h_data.values_);
+  const auto lower_width = get_max_width(h_data.lower_bounds_); 
+  const auto upper_width = get_max_width(h_data.upper_bounds_);
   const auto str_values_width = get_max_width(str_values);
-  const auto hist_shift = labels_width + str_values_width + 1; // + 1 for " "
+  const auto hist_shift = lower_width + upper_width + str_values_width + additional_offset;
 
+  visualization_data v_data(str_values, scale_factors, lower_width, upper_width,
+                            str_values_width, hist_shift);
+  return v_data;
+}
+
+std::string draw_histogram(const extract& h_data, const visualization_data& v_data) {
   std::stringstream visualisation;
-  visualisation << "\n" << get_external_line(hist_shift) << "\n";
+  
+  visualisation << "\n" << get_external_line(v_data.external_line_shift_) << "\n";
 
-  for (unsigned int i = 0; i < values.size(); i++)
-    visualisation << get_single_label(labels, i, labels_width) << " "
-                  << get_single_str_value(str_values, i, str_values_width) << " "
-                  << get_single_histogram_line(scale_factors, i) << "\n";
-
-  visualisation << get_external_line(hist_shift) << "\n\n";
+  for (unsigned int i = 0; i < h_data.size(); i++)
+    visualisation << get_single_label(h_data, i, v_data.lower_bounds_width_, v_data.upper_bounds_width_) << "  "
+                  << get_single_histogram_line(v_data.scale_factors_, i) << " "
+                  << get_single_str_value(v_data.str_values_, i, v_data.str_values_width_) << "\n";
+  visualisation << get_external_line(v_data.external_line_shift_) << "\n\n";
   return visualisation.str();
 }
 } // namespace
 
 template <class histogram>
 void display(const histogram& h) {
-  std::vector<std::string> labels{};
-  std::vector<int> values{};
 
-  extract_data(h, labels, values);
+  auto histogram_data = extract_data(h);
+  auto visualization_data = precalculate_visual_data(histogram_data);
 
-  std::cout << draw_histogram(labels, values);
+  std::cout << draw_histogram(histogram_data, visualization_data);
 }
 
 } // namespace display
