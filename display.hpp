@@ -169,13 +169,13 @@ std::string get_top_line(const unsigned int labels_width,
 }
 
 visualization_data precalculate_visual_data(extract& h_data){
-  const unsigned int additional_offset = 5; // 6 white characters  
+  const unsigned int additional_offset = 6; // 6 white characters  
   const auto scale_factors = calculate_scale_factors(h_data.values_);
   const auto str_values = convert_to_str_vec(h_data.values_);
   const auto lower_width = get_max_width(h_data.lower_bounds_); 
   const auto upper_width = get_max_width(h_data.upper_bounds_);
   const auto str_values_width = get_max_width(str_values);
-  const auto hist_shift = lower_width + upper_width  + additional_offset;
+  const auto hist_shift = lower_width + upper_width + str_values_width + additional_offset;
 
   visualization_data v_data(str_values, scale_factors, lower_width, upper_width,
                             str_values_width, hist_shift);
@@ -189,8 +189,9 @@ std::string draw_histogram(const extract& h_data, const visualization_data& v_da
 
   for (unsigned int i = 0; i < h_data.size(); i++)
     visualisation << get_single_label(h_data, i, v_data.lower_bounds_width_, v_data.upper_bounds_width_) << "  "
-                  << get_single_histogram_line(v_data.scale_factors_, i) << " "
-                  << get_single_str_value(v_data.str_values_, i, v_data.str_values_width_) << "\n";
+                  << get_single_str_value(v_data.str_values_, i, v_data.str_values_width_) << " "
+                  << get_single_histogram_line(v_data.scale_factors_, i) << "\n";
+                   
   visualisation << get_external_line(v_data.external_line_shift_) << "\n\n";
   return visualisation.str();
 }
